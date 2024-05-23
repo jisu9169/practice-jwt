@@ -1,7 +1,7 @@
 package com.sparta.springauth.config;
 
-import com.sparta.springauth.jwt.JwtAuthenticationFilter;
 import com.sparta.springauth.jwt.JwtAuthorizationFilter;
+import com.sparta.springauth.jwt.JwtAuthenticationFilter;
 import com.sparta.springauth.jwt.JwtUtil;
 import com.sparta.springauth.security.UserDetailsServiceImpl;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -17,22 +18,21 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 
 @Configuration
 @EnableWebSecurity // Spring Security 지원을 가능하게 함
+@EnableGlobalMethodSecurity(securedEnabled = true)
 public class WebSecurityConfig {
 
   private final JwtUtil jwtUtil;
   private final UserDetailsServiceImpl userDetailsService;
   private final AuthenticationConfiguration authenticationConfiguration;
 
-  public WebSecurityConfig(JwtUtil jwtUtil, UserDetailsServiceImpl userDetailsService,
-      AuthenticationConfiguration authenticationConfiguration) {
+  public WebSecurityConfig(JwtUtil jwtUtil, UserDetailsServiceImpl userDetailsService, AuthenticationConfiguration authenticationConfiguration) {
     this.jwtUtil = jwtUtil;
     this.userDetailsService = userDetailsService;
     this.authenticationConfiguration = authenticationConfiguration;
   }
 
   @Bean
-  public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration)
-      throws Exception {
+  public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
     return configuration.getAuthenticationManager();
   }
 
@@ -60,8 +60,7 @@ public class WebSecurityConfig {
 
     http.authorizeHttpRequests((authorizeHttpRequests) ->
         authorizeHttpRequests
-            .requestMatchers(PathRequest.toStaticResources().atCommonLocations())
-            .permitAll() // resources 접근 허용 설정
+            .requestMatchers(PathRequest.toStaticResources().atCommonLocations()).permitAll() // resources 접근 허용 설정
             .requestMatchers("/api/user/**").permitAll() // '/api/user/'로 시작하는 요청 모두 접근 허가
             .anyRequest().authenticated() // 그 외 모든 요청 인증처리
     );
@@ -74,6 +73,13 @@ public class WebSecurityConfig {
     // 필터 관리
     http.addFilterBefore(jwtAuthorizationFilter(), JwtAuthenticationFilter.class);
     http.addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
+
+    // 접근 불가 페이지
+    http.exceptionHandling((exceptionHandling) ->
+        exceptionHandling
+            // "접근 불가" 페이지 URL 설정
+            .accessDeniedPage("/forbidden.html")
+    );
 
     return http.build();
   }
